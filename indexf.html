@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>My Course</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* --- СБРОС И БАЗА --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        :root {
+            --bg-color: #000000;        /* Абсолютный черный (OLED) */
+            --card-bg: #1c1c1e;         /* Темно-серый iOS */
+            --text-primary: #ffffff;
+            --text-secondary: #8e8e93;
+            --accent-color: #0a84ff;    /* iOS Blue */
+            --separator: rgba(254, 254, 254, 0.12);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 90px; /* Отступ под меню */
+            padding-top: 60px;    /* Отступ под шапку */
+        }
+
+        /* --- СТЕКЛЯННАЯ ШАПКА --- */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: rgba(28, 28, 30, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid var(--separator);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .header h1 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* --- КОНТЕЙНЕРЫ И ВКЛАДКИ --- */
+        .tab-content { display: none; padding: 20px 16px; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- КАРТОЧКИ --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        /* Видео 16:9 */
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            background: #000;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%; border: 0;
+        }
+
+        .card-body { padding: 16px; }
+
+        .card-title {
+            font-size: 19px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .card-desc {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        /* Теги/Бейджи */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(10, 132, 255, 0.15);
+            color: var(--accent-color);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        /* --- АУДИО ПЛЕЕР --- */
+        audio {
+            width: 100%;
+            height: 40px;
+            border-radius: 20px;
+            margin-top: 5px;
+        }
+        /* Кастомизация для Chrome/iOS */
+        audio::-webkit-media-controls-panel {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- РАСКРЫВАЮЩИЙСЯ ТЕКСТ (DETAILS) --- */
+        details {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        summary {
+            padding: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--accent-color);
+            list-style: none; /* Убираем стандартный треугольник */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        summary::after {
+            content: '+';
+            font-size: 18px;
+        }
+        details[open] summary::after { content: '-'; }
+        
+        .text-content {
+            padding: 12px;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #d1d1d6;
+            white-space: pre-line; /* Сохраняет абзацы из вашего текста */
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* --- НИЖНЕЕ МЕНЮ (GLASS) --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 83px; /* Высота под iPhone */
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 0.5px solid var(--separator);
+            display: flex;
+            justify-content: space-around;
+            padding-top: 10px;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #8e8e93;
+            font-size: 10px;
+            font-weight: 500;
+            width: 60px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .nav-item svg { width: 28px; height: 28px; margin-bottom: 4px; fill: currentColor; }
+        .nav-item.active { color: var(--accent-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 id="page-title">Система</h1>
+    </div>
+
+    <div id="tab-system" class="tab-content active">
+        
+        <div class="card">
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/Ja2VgG4I9KA?modestbranding=1&rel=0&showinfo=0" allowfullscreen></iframe>
+            </div>
+            <div class="card-body">
+                <span class="badge">Старт</span>
+                <div class="card-title">Гарантированный метод начать</div>
+                <div class="card-desc">Хватит планировать. Простая схема запуска.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/NDYvxYSFbvA?modestbranding=1&rel=0" allowfullscreen></iframe>
+            </div>
+            <div class="card-body">
+                <span class="badge">База</span>
+                <div class="card-title">Дисциплина по-новому</div>
+                <div class="card-desc">Почему старые методы насилия над собой не работают.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/sq9P1fyzLnk?modestbranding=1&rel=0" allowfullscreen></iframe>
+            </div>
+            <div class="card-body">
+                <span class="badge">Мотивация</span>
+                <div class="card-title">Мгновенный результат</div>
+                <div class="card-desc">Твой ключ к успеху здесь и сейчас.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/ayd3ULvow3k?modestbranding=1&rel=0" allowfullscreen></iframe>
+            </div>
+            <div class="card-body">
+                <span class="badge">Ошибки</span>
+                <div class="card-title">Работа без результата</div>
+                <div class="card-desc">В чем суть холостых действий и как это исправить.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="tab-mindset" class="tab-content">
+        
+        <div class="card">
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/n9s_4jvxR0M?modestbranding=1&rel=0" allowfullscreen></iframe>
+            </div>
+            <div class="card-body">
+                <span class="badge">Фокус</span>
+                <div class="card-title">Тишина и концентрация</div>
+                <div class="card-desc">Как убрать шум и начать слышать свои мысли.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="video-wrapper">
+                <iframe src="https://www.youtube.com/embed/odtCZ2fsRRk?modestbranding=1&rel=0" allowfullscreen></iframe>
+            </div>
+            <div class="card-body">
+                <span class="badge">Психология</span>
+                <div class="card-title">Выгорание: выход есть</div>
+                <div class="card-desc">Как не сгореть на старте и восстановить ресурс.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <span class="badge">Аудио-лекция</span>
+                <div class="card-title">🎙 Окружение</div>
+                <div class="card-desc">Почему ты — это среднее арифметическое твоих друзей.</div>
+                <audio controls>
+                    <source src="voice1.mp3" type="audio/mpeg">
+                </audio>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <span class="badge">Аудио-лекция</span>
+                <div class="card-title">🎙 Отдых</div>
+                <div class="card-desc">Как отдыхать, чтобы реально набираться сил.</div>
+                <audio controls>
+                    <source src="voice2.mp3" type="audio/mpeg">
+                </audio>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="tab-guides" class="tab-content">
+
+        <div class="card">
+            <div class="card-body">
+                <span class="badge">Стратегия</span>
+                <div class="card-title">Не сливай энергию</div>
+                <div class="card-desc">Ты машина, но 90% топлива льешь мимо бака. Разбор ошибок.</div>
+                
+                <details>
+                    <summary>Читать полностью</summary>
+                    <div class="text-content">
+                        Представь ситуацию:
+
+                        - Ты приехал на заправку, оплатил ее и 90% топлива ты сливаешь на асфальт , не в бак.
+                        
+                        Чувствуешь? Не приятно, ты ведь заплатил - а получилось что зря.
+                        
+                        Так вот ты машина. В начале дня ты полон энергии, но тратишь ее не на те вещи.
+                        Ты скролишь ленту, др()чишь, выпиваешь и думаешь:
+                        
+                        - Окей, 4 часа дня. Еще время есть. Сяду за работу к 5. Потом в 5 ты решил позвонить кентам, разговор затянулся и выходит что уже 7 часов
+                        
+                        Как так? Я же не давно, вроде бы, встал с кровати. Ты заставляешь себя сесть работать, но фокуса уже нет.
+                        Делаешь базовые задачи в работе, может даже не все. А может вообще создаешь видимость работы, для того чтобы “искусственно” заставить не винить себя.
+                        
+                        Какой вывод?
+                        - 20% забрал тик ток
+                        - 30% забрало по?но
+                        - 30% ты отдал на пустой разговор с друзьями
+                        - 10% забрали рутинные дела
+                        - 10% осталось
+                        
+                        + не закрытый день
+                        + не сдвиг с места
+                        + план переноситься на завтра
+                        + много всякой негативной залупы, которую перечисляя быстрее загонишь себя в депрессию
+                        
+                        Ты думаешь, что я описал стандартный базовый пример неудачника - который все приводят чтобы запугать вас. Но на самом деле все это не работает.
+                        
+                        Никто не считает себя таким, но почему то в конце дня испытывает злость на себя и чувство слабости.
+                        
+                        У каждого свои отвлечения, суть в том что они есть. Соблазны у каждого - суть в том, чтобы их сконтролировать
+                        
+                        - Как?
+                        Не убирать их навсегда, а временно. Пока ты не сделаешь то то то то…
+                        
+                        Не покуришь сигарету, пока не закроешь сделку
+                        Не посмотришь фильм, пока не закроешь дневной план
+                        и тд
+                        
+                        Или цель: Купить мотоцикл
+                        
+                        ”я не буду скачивать тик ток, инсту (если не нужно для работы) пока не куплю мотоцик”
+                        
+                        Сделайте зависимость стимулом.
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <span class="badge">Нетворкинг</span>
+                <div class="card-title">Как обзавестись связями</div>
+                <div class="card-desc">Тонкая грань между навязчивостью и пользой. Шаблоны сообщений.</div>
+                
+                <details>
+                    <summary>Читать полностью</summary>
+                    <div class="text-content">
+                        Тут тонкая грань между постоянным общением, где я рассказывал что не нужно навязываться и искать целенаправленно.
+
+                        Тут мы говорим про построение связей с уже успешными людьми в вашей нише для получение опыта и информации.
+                        Взаимовыгода.
+                        
+                        Вы должны предложить человеку что то ценное, чтобы он тоже получил хоть и минимальный но импакт. Ведь если хотите созвониться/встретиться/списаться с человеком выше вас по рангу, вам нужно его заинтересовать.
+                        
+                        - Как это сделать?
+                        
+                        Важно не спрашивать "чем я могу быть полезен" ,а сразу предложить готовое решение:
+                        Пример:
+                        
+                        Если у вас есть подписчики в инсте/тг можете предложить рекламу сервиса, бизнеса в замен разговора.
+                        Вот и прелесть медийки, самый простой способ.
+                        
+                        В других случаях нужно отталкиваться от вашего навыка и предлагать возможно вариант улучшения бизнеса человека, с которым хотите пообщаться или доработать что то.
+                        
+                        Суть в том, чтобы не давать ощущение "бесплатной работы" человеку.
+                        
+                        Шаблон сообщения:
+                        «Иван, добрый день! Я сейчас масштабирую свой проект и столкнулся с вопросом [вопрос]. Ваш опыт мне очень полезен.
+                        Понимаю ценность вашего времени, поэтому предлагаю сделать рекламную интеграцию вашего продукта в моем инстаграмме (10к лояльной аудитории, охваты в сторис [цифра]). Уверен, вашему бизнесу будет полезен этот приток лидов.
+                        Найдется пол часа для короткого созвона/общения)»
+                    </div>
+                </details>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('tab-system', 'Система', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            <span>Система</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-mindset', 'Мышление', this)">
+            <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z"/></svg>
+            <span>Мышление</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-guides', 'Гайды', this)">
+            <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+            <span>Гайды</span>
+        </div>
+    </div>
+
+    <script>
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+        // Красим статус-бар в черный
+        window.Telegram.WebApp.setHeaderColor('#000000');
+        window.Telegram.WebApp.setBackgroundColor('#000000');
+
+        function switchTab(tabId, title, element) {
+            // 1. Скрываем все вкладки
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            // 2. Убираем активный класс у кнопок
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            // 3. Показываем выбранное
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+            
+            // 4. Меняем заголовок в шапке
+            document.getElementById('page-title').innerText = title;
+            
+            // 5. Вибрация при клике (Taptic Engine)
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            
+            // 6. Скролл наверх
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+    </script>
+</body>
+</html>
